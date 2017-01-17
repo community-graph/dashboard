@@ -1,0 +1,62 @@
+== Analytics dashboard(s) for community graph
+
+Start tracking developer engagement metrics? 
+In the past we have been tracking meetup, twitter, slack activity, downloads, online training and M&M
+
+Look at different metrics
+
+* size of community per channel
+* time series
+* most active users, tags
+* activity per time frame
+* aggregated activity per user (curve)
+* frequent topics from tags / keyword analysis
+* 
+
+http://dashing.io/
+http://rdash.github.io/
+http://freeboard.io/
+http://keen.github.io/dashboards/
+https://rstudio.github.io/shinydashboard/
+
+
+== Activity
+
+SO posts (questions and answers)
+
+----
+match (c:StackOverflow:Content) 
+return apoc.date.format(toInt(c.created),"s","YYYY-MM") as month, count(*) as posts 
+order by month desc
+----
+
+Tweets
+
+----
+match (c:Tweet:Content)  // Mon Jan 16 21:17:45 +0000 2017
+return apoc.date.format(apoc.date.parse(c.created,"s","EE MMM dd HH:mm:ss Z YYYY"),"s","YYYY-MM") as month, count(*) as tweets 
+order by month desc
+----
+
+Meetup events
+
+----
+match (c:Meetup:Event)
+return apoc.date.format(toInt(c.time),"ms","YYYY-MM") as month, count(*) as events, collect(distinct c.title)
+order by month desc
+----
+
+== Recent interesting Content
+
+* tweets
+* new repositories, new releases
+
+
+----
+match (t:Tweet:Content)-->(l:Link) 
+where not t:Retweet 
+return t.text,l.url,
+       sum(size((t)<-[:RETWEETED]-())) + sum(t.favorites) as score 
+order by score desc limit 100
+----
+
