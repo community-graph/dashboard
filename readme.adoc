@@ -25,8 +25,8 @@ https://rstudio.github.io/shinydashboard/
 SO posts (questions and answers)
 
 ----
-match (c:StackOverflow:Content) 
-return apoc.date.format(toInt(c.created),"s","YYYY-MM") as month, count(*) as posts 
+match (c:StackOverflow:Content)
+return apoc.date.format(toInt(c.created),"s","yyyy-MM-01") as month, count(*) as posts
 order by month desc
 ----
 
@@ -34,15 +34,17 @@ Tweets
 
 ----
 match (c:Tweet:Content)  // Mon Jan 16 21:17:45 +0000 2017
-return apoc.date.format(apoc.date.parse(c.created,"s","EE MMM dd HH:mm:ss Z YYYY"),"s","YYYY-MM") as month, count(*) as tweets 
+return apoc.date.format(c.created,"s","YYYY-MM-01") as month, count(*) as tweets 
 order by month desc
 ----
+
+// ,"EE MMM dd HH:mm:ss Z YYYY"),"s"
 
 Meetup events
 
 ----
 match (c:Meetup:Event)
-return apoc.date.format(toInt(c.time),"ms","YYYY-MM") as month, count(*) as events, collect(distinct c.title)
+return apoc.date.format(toInt(c.time),"ms","YYYY-MM-01") as month, count(*) as events, collect(distinct c.title)
 order by month desc
 ----
 
@@ -51,12 +53,53 @@ order by month desc
 * tweets
 * new repositories, new releases
 
-
 ----
 match (t:Tweet:Content)-->(l:Link) 
 where not t:Retweet 
 return t.text,l.url,
        sum(size((t)<-[:RETWEETED]-())) + sum(t.favorites) as score 
 order by score desc limit 100
+----
+
+
+----
+MATCH (n:Repository) WITH n ORDER BY n.created desc LIMIT 100
+WITH n ORDER BY n.created DESC LIMIT 100
+RETURN n.title, n.url, n.created, n.favorites, substring(n.description,0,250) as desc
+ORDER BY n.favorites DESC
+----
+
+== Topics / Content Analytics
+
+.Frequent words in top rated + viewed, recent questions by tag
+[source,cypher]
+----
+WITH "spring-data-neo4j" as tag
+MATCH (n:Question)-[:TAGGED]->(t:Tag {name:tag}) 
+WHERE n.created > timestamp()/1000 - 365*24*3600
+UNWIND [w IN split(apoc.text.regreplace(toLower(n.text),"\\W+"," ")," ") WHERE length(w) > 3] as word
+WITH n, word, count(*) as freq
+WHERE 1 < freq < 15
+WITH * ORDER BY freq desc
+WITH n, collect({freq:freq, word:word})[0..10] as topwords
+RETURN n.title, n.score, n.favorites, n.view_count, n.is_answered,  size((n)<-[:ANSWERED]-()) as answers, topwords
+ORDER BY n.score*100+n.view_count desc
+LIMIT 25
+----
+
+[source,cypher]
+----
+WITH "cypher" as tag
+MATCH (n:Question)-[:TAGGED]->(t:Tag {name:tag}) 
+WHERE n.created > timestamp()/1000 - 365*24*3600
+WITH n, split(apoc.text.regreplace(apoc.text.regreplace(toLower(n.text),'&.+?;',''),"[^a-z]+"," ")," ") as words
+UNWIND apoc.coll.pairsMin(words) as pair
+WITH n, pair, count(*) as freq
+WHERE 1 < freq < 15
+WITH * ORDER BY freq desc
+WITH n, collect({freq:freq, pair:pair})[0..10] as topwords
+RETURN n.title, n.score, n.favorites, n.view_count, n.is_answered,  size((n)<-[:ANSWERED]-()) as answers, topwords
+ORDER BY n.score*100+n.view_count desc
+LIMIT 25
 ----
 
