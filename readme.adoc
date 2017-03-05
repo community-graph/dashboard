@@ -17,26 +17,26 @@ Look at different metrics
 
 === Dashboards:
 
-http://dashing.io/
-http://rdash.github.io/
-http://freeboard.io/
-http://keen.github.io/dashboards/
-http://www.metabase.com/
-http://mozaik.rocks/
-https://redash.io/
+* http://dashing.io/
+* http://rdash.github.io/
+* http://freeboard.io/
+* http://keen.github.io/dashboards/
+* http://www.metabase.com/
+* http://mozaik.rocks/
+* https://redash.io/
 
 === https://rstudio.github.io/shinydashboard/
 
 Overviews of dashboards:
 
-http://www.cssauthor.com/dashboard-frameworks/
-http://www.astronomer.io/blog/six-open-source-dashboards
+* http://www.cssauthor.com/dashboard-frameworks/
+* http://www.astronomer.io/blog/six-open-source-dashboards
 
-= Metrics / Numbers / Insights
+= Metrics / Numbers / Insights of Activity and Content
 
-== Activity
+== Activity 
 
-SO posts (questions and answers)
+=== SO posts (questions and answers)
 
 ----
 match (c:StackOverflow:Content)
@@ -48,13 +48,15 @@ order by month desc
 
 [source,cypher]
 ----
-match (u:User)-->(o) where exists(o.created) and toInt(o.created) is not null
-AND timestamp() / 1000 - o.created < 3600*24*365
-return u.name, count(*) as c
+match (u:User)-[r]->(o) where exists(o.created) and toInt(o.created) is not null
+AND timestamp() / 1000 - o.created < 3600*24*30
+return u.name, u.id, count(*) as c, 
+collect(distinct head(filter(l IN labels(o) where l in ['Event','Tweet','Repository','Question','Answer']))) as type, 
+collect(distinct type(r)) as activity
 ORDER BY c DESC LIMIT 100
 ----
 
-Tweets
+=== Tweets
 
 ----
 match (c:Tweet:Content)  // Mon Jan 16 21:17:45 +0000 2017
@@ -64,7 +66,7 @@ order by month desc
 
 // ,"EE MMM dd HH:mm:ss Z YYYY"),"s"
 
-Meetup events
+=== Meetup events
 
 ----
 match (c:Meetup:Event)
@@ -77,6 +79,8 @@ order by month desc
 * tweets
 * new repositories, new releases
 
+=== Links from Tweets
+
 ----
 match (t:Tweet:Content)-->(l:Link) 
 where not t:Retweet 
@@ -85,12 +89,22 @@ return t.text,l.url,
 order by score desc limit 100
 ----
 
+=== Recently created Repositories
 
 ----
 MATCH (n:Repository) WITH n ORDER BY n.created desc LIMIT 100
 WITH n ORDER BY n.created DESC LIMIT 100
 RETURN n.title, n.url, n.created, n.favorites, substring(n.description,0,250) as desc
 ORDER BY n.favorites DESC
+----
+
+=== Recent Meetup Events
+
+----
+MATCH (g:Group)-[:CONTAINED]->(e:Event:Meetup)<-[:HOSTED]-(v:Venue)
+WHERE not e.title contains 'GraphConnect' 
+RETURN g.title, e.status, e.title, e.yes_rsvp_count as attendance, e.rating, v.city, v.name
+ORDER BY e.time desc LIMIT 100
 ----
 
 == Topics / Content Analytics
