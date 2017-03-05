@@ -3,6 +3,8 @@
 Start tracking developer engagement metrics? 
 In the past we have been tracking meetup, twitter, slack activity, downloads, online training and M&M
 
+Readonly community graph instance: http://138.197.15.1:7474/browser/ user all pwd readonly   (bolt://all:readonly@138.197.15.1:7687)
+
 Look at different metrics
 
 * size of community per channel
@@ -13,12 +15,24 @@ Look at different metrics
 * frequent topics from tags / keyword analysis
 * 
 
+=== Dashboards:
+
 http://dashing.io/
 http://rdash.github.io/
 http://freeboard.io/
 http://keen.github.io/dashboards/
-https://rstudio.github.io/shinydashboard/
+http://www.metabase.com/
+http://mozaik.rocks/
+https://redash.io/
 
+=== https://rstudio.github.io/shinydashboard/
+
+Overviews of dashboards:
+
+http://www.cssauthor.com/dashboard-frameworks/
+http://www.astronomer.io/blog/six-open-source-dashboards
+
+= Metrics / Numbers / Insights
 
 == Activity
 
@@ -28,6 +42,16 @@ SO posts (questions and answers)
 match (c:StackOverflow:Content)
 return apoc.date.format(toInt(c.created),"s","yyyy-MM-01") as month, count(*) as posts
 order by month desc
+----
+
+=== Users
+
+[source,cypher]
+----
+match (u:User)-->(o) where exists(o.created) and toInt(o.created) is not null
+AND timestamp() / 1000 - o.created < 3600*24*365
+return u.name, count(*) as c
+ORDER BY c DESC LIMIT 100
 ----
 
 Tweets
