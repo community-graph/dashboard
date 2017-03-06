@@ -38,6 +38,7 @@ Overviews of dashboards:
 
 === SO posts (questions and answers)
 
+[source,cypher]
 ----
 match (c:StackOverflow:Content)
 return apoc.date.format(toInt(c.created),"s","yyyy-MM-01") as month, count(*) as posts
@@ -58,6 +59,7 @@ ORDER BY c DESC LIMIT 100
 
 === Tweets
 
+[source,cypher]
 ----
 match (c:Tweet:Content)  // Mon Jan 16 21:17:45 +0000 2017
 return apoc.date.format(c.created,"s","YYYY-MM-01") as month, count(*) as tweets 
@@ -81,6 +83,7 @@ order by month desc
 
 === Links from Tweets
 
+[source,cypher]
 ----
 match (t:Tweet:Content)-->(l:Link) 
 where not t:Retweet 
@@ -91,6 +94,7 @@ order by score desc limit 100
 
 === Recently created Repositories
 
+[source,cypher]
 ----
 MATCH (n:Repository) WITH n ORDER BY n.created desc LIMIT 100
 WITH n ORDER BY n.created DESC LIMIT 100
@@ -100,12 +104,34 @@ ORDER BY n.favorites DESC
 
 === Recent Meetup Events
 
+[source,cypher]
 ----
 MATCH (g:Group)-[:CONTAINED]->(e:Event:Meetup)<-[:HOSTED]-(v:Venue)
 WHERE not e.title contains 'GraphConnect' 
 RETURN g.title, e.status, e.title, e.yes_rsvp_count as attendance, e.rating, v.city, v.name
 ORDER BY e.time desc LIMIT 100
 ----
+
+
+=== Releases that were tweeted about
+
+[source,cypher]
+----
+match (t:Tweet)<-[:POSTED]-(p:User)
+where t.created > timestamp()/1000 - 14*24*3600 and t.text contains 'release'
+return t.text, collect(distinct p.name) as names
+order by size(names) desc
+----
+
+
+[source,cypher]
+----
+match (t:Tweet)<-[:POSTED]-(p:User)
+where t.created > timestamp()/1000 - 14*24*3600 and t.text contains 'release' and t.text =~ '.+\\d\\.\\d.+'
+return t.text, collect(distinct p.name) as names
+order by size(names) desc```
+----
+
 
 == Topics / Content Analytics
 
