@@ -92,6 +92,15 @@ return t.text,l.url,
 order by score desc limit 100
 ----
 
+----
+match (t:Tweet:Content)-->(l:Link) 
+where not t:Retweet  and t.created > timestamp()/1000 - 7*24*3600
+return t.text,l.url,
+       sum(size((t)<-[:RETWEETED]-())) + sum(t.favorites) as score 
+order by score desc limit 100
+----
+
+
 === Recently created Repositories
 
 [source,cypher]
@@ -134,6 +143,27 @@ order by size(names) desc```
 
 
 == Topics / Content Analytics
+
+.Questions in Slack in certain channels
+[source,cypher]
+----
+match (p:User)-[:POSTED]->(m:Message:Slack:Text)-[:IN]->(c:Channel) 
+where m.text contains "?" and c.title contains "cypher" and not p.name contains "neo"
+return p.name, count(*) as c 
+order by c desc limit 10
+----
+
+.Phrases in Slack Channel
+[source,cypher]
+----
+match (p:User)-[:POSTED]->(m:Message:Slack:Text)-[:IN]->(c:Channel) 
+where m.text contains "?" and c.title contains "cypher" and not p.name contains "neo"
+with split(apoc.text.regreplace(toLower(m.text),"[^a-z ]+"," ")," ") as words
+unwind range(0,size(words)-4) as idx
+with words[idx..idx+4] as phrase where size([w in phrase where length(w) > 3]) > 2 and none(w in phrase where trim(w) IN ['','http'])
+return phrase,count(*) as c
+order by c desc limit 100
+----
 
 .Frequent words in top rated + viewed, recent questions by tag
 [source,cypher]
